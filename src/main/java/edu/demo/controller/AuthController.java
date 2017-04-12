@@ -29,7 +29,7 @@ import edu.demo.utils.XmlUtils;
 @RequestMapping("wechat")
 public class AuthController {
 
-	String url = "http://teltang.tunnel.qydev.com/WeiXinServer/wechat";
+	String url = "http://endding.tunnel.qydev.com/WeiXinServer/wechat";
 
 	@Value("${token}")
 	private String token;
