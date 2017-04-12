@@ -1,24 +1,33 @@
-package edu.demo.utils;
+package edu.demo.service;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
+import edu.demo.utils.Aes;
+import edu.demo.utils.HttpUtil;
 import edu.demo.utils.HttpUtil.HttpRep;
+import edu.demo.utils.JsonUtil;
 
-public class TulingApiProcess {
-	static String apiKey = "";
-	static String secret = "";
-	static String url = "";
+@Service
+public class TuringApiService {
+	@Value("${turing_api_key}")
+	private String turing_api_key;
+	@Value("${turing_api_secret}")
+	private String turing_api_secret;
+	@Value("${turing_api_url}")
+	private String turing_api_url;
 
-	public static Map<String, Object> getChatAIResponse(String content, String userId)
+	public Map<String, Object> getChatAIResponse(String content, String userId)
 			throws UnsupportedEncodingException {
 
 		Map<String, String> params = new HashMap<>();
 
-		params.put("key", apiKey);
+		params.put("key", turing_api_key);
 		params.put("info", content);
 		params.put("userid", userId);
 
@@ -29,7 +38,7 @@ public class TulingApiProcess {
 		String timestamp = String.valueOf(System.currentTimeMillis());
 
 		// 生成密钥
-		String keyParam = secret + timestamp + apiKey;
+		String keyParam = turing_api_secret + timestamp + turing_api_key;
 		String key = DigestUtils.md5Hex(keyParam);
 
 		// 加密
@@ -37,11 +46,12 @@ public class TulingApiProcess {
 		String data = mc.encrypt(json);
 
 		params.clear();
-		params.put("key", apiKey);
+		params.put("key", turing_api_key);
 		params.put("timestamp", timestamp);
 		params.put("data", data);
 
-		HttpRep rep = HttpUtil.doPost(JsonUtil.object2JsonString(params), url);
+		HttpRep rep = HttpUtil.doPost(JsonUtil.object2JsonString(params),
+				turing_api_url);
 
 		if (rep != null && rep.getStatusCode() == 200) {
 			String result = rep.getContent();
@@ -54,9 +64,10 @@ public class TulingApiProcess {
 		return null;
 	}
 
-	public static void main(String[] args) throws UnsupportedEncodingException, InterruptedException {
+	public static void main(String[] args) throws UnsupportedEncodingException,
+			InterruptedException {
 
-		System.out.println(getChatAIResponse("乌拉", "121"));
+		// System.out.println(getChatAIResponse("乌拉", "121"));
 
 		// Map<String, String> params = new HashMap<>();
 		//
@@ -87,27 +98,4 @@ public class TulingApiProcess {
 		// }
 
 	}
-
-	static String sendAndResponse(String apiKey, String content) {
-		Map<String, String> params = new HashMap<>();
-
-		params.put("key", apiKey);
-		params.put("info", content);
-		params.put("userid", "1");
-
-		String json = JsonUtil.object2JsonString(params);
-
-		HttpRep rep = HttpUtil.doPost(json, url);
-
-		if (rep != null && rep.getStatusCode() == 200) {
-			String result = rep.getContent();
-
-			Map<String, Object> map = JsonUtil.json2Map(result);
-
-			return map.get("text").toString();
-
-		}
-		return null;
-	}
-
 }

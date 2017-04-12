@@ -8,7 +8,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.dom4j.DocumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,12 +18,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.qq.weixin.mp.aes.AesException;
 import com.qq.weixin.mp.aes.WXBizMsgCrypt;
 
-import edu.demo.bean.WeChatMessageFactory;
 import edu.demo.bean.message.WeChatMessage;
 import edu.demo.service.TokenService;
+import edu.demo.service.WeChatMessageService;
 import edu.demo.utils.XmlUtils;
 
 @Controller
@@ -43,16 +41,24 @@ public class AuthController {
 	private String appId;
 
 	@Resource
-	TokenService tokenService;
+	private TokenService tokenService;
 
-	private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+	@Resource
+	private WeChatMessageService weChatMessageService;
+
+	private static final Logger log = LoggerFactory
+			.getLogger(AuthController.class);
 
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseBody
-	public String wechatGet(HttpServletRequest request, HttpServletResponse response,
-			@RequestParam("signature") String signature, @RequestParam("timestamp") String timestamp,
-			@RequestParam("nonce") String nonce, @RequestParam("echostr") String echostr) throws Exception {
-		log.info("signature=" + signature + ",timestamp=" + timestamp + ",nonce=" + nonce + ",echostr=" + echostr);
+	public String wechatGet(HttpServletRequest request,
+			HttpServletResponse response,
+			@RequestParam("signature") String signature,
+			@RequestParam("timestamp") String timestamp,
+			@RequestParam("nonce") String nonce,
+			@RequestParam("echostr") String echostr) throws Exception {
+		log.info("signature=" + signature + ",timestamp=" + timestamp
+				+ ",nonce=" + nonce + ",echostr=" + echostr);
 
 		// signature=4976af8d838cbdd4c3341646a489830ab8438dd5,timestamp=1486707690,nonce=813815797,echostr=719619426885819387
 
@@ -64,7 +70,8 @@ public class AuthController {
 
 		Arrays.sort(arr);
 
-		String localSignature = DigestUtils.sha1Hex(Arrays.toString(arr).replaceAll("(\\[)|(\\])|(\\,)|(\\W)", ""));
+		String localSignature = DigestUtils.sha1Hex(Arrays.toString(arr)
+				.replaceAll("(\\[)|(\\])|(\\,)|(\\W)", ""));
 
 		if (localSignature.equals(signature)) {
 			return echostr;
@@ -76,10 +83,14 @@ public class AuthController {
 
 	@RequestMapping(method = RequestMethod.POST, produces = "application/xml; charset=utf-8")
 	@ResponseBody
-	public String wechatPost(HttpServletRequest request, HttpServletResponse response, @RequestBody String context,
-			@RequestParam("signature") String signature, @RequestParam("timestamp") String timestamp,
-			@RequestParam("nonce") String nonce, @RequestParam("openid") String openid,
-			@RequestParam("encrypt_type") String encrypt_type, @RequestParam("msg_signature") String msg_signature) {
+	public String wechatPost(HttpServletRequest request,
+			HttpServletResponse response, @RequestBody String context,
+			@RequestParam("signature") String signature,
+			@RequestParam("timestamp") String timestamp,
+			@RequestParam("nonce") String nonce,
+			@RequestParam("openid") String openid,
+			@RequestParam("encrypt_type") String encrypt_type,
+			@RequestParam("msg_signature") String msg_signature) {
 		try {
 
 			// log.info("接收消息密文: " + context);
@@ -93,11 +104,13 @@ public class AuthController {
 
 			log.info(params.toString());
 
-			WeChatMessage receive = WeChatMessageFactory.parseMapToMessage(params);
+			WeChatMessage receive = weChatMessageService
+					.parseMapToMessage(params);
 
 			log.info(receive.toString());
 
-			WeChatMessage reply = WeChatMessageFactory.parseMessageAndReply(receive);
+			WeChatMessage reply = weChatMessageService
+					.parseMessageAndReply(receive);
 
 			log.info(reply.toString());
 

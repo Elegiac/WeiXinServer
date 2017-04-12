@@ -1,15 +1,18 @@
-package edu.demo.bean;
+package edu.demo.service;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.dom4j.DocumentException;
+import javax.annotation.Resource;
 
+import org.dom4j.DocumentException;
+import org.springframework.stereotype.Service;
+
+import edu.demo.bean.MessageType;
 import edu.demo.bean.event.EventType;
 import edu.demo.bean.event.WeChatEvent;
 import edu.demo.bean.message.WeChatMessage;
@@ -27,12 +30,16 @@ import edu.demo.bean.message.reply.VoiceReply;
 import edu.demo.bean.message.reply.VoiceReply.Voice;
 import edu.demo.utils.BeanUtils;
 import edu.demo.utils.StringUtils;
-import edu.demo.utils.TulingApiProcess;
 
-public class WeChatMessageFactory {
+@Service
+public class WeChatMessageService {
+	@Resource
+	private TuringApiService turingApiService;
+
 	@SuppressWarnings("unchecked")
-	public static WeChatMessage parseMapToMessage(Map<String, Object> params)
-			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+	public WeChatMessage parseMapToMessage(Map<String, Object> params)
+			throws ClassNotFoundException, InstantiationException,
+			IllegalAccessException {
 		String type = params.get("MsgType").toString();
 
 		String className = null;
@@ -40,21 +47,24 @@ public class WeChatMessageFactory {
 		if (type.equals("event")) {
 
 			className = "edu.demo.bean.event."
-					+ StringUtils.upperCaseFirstLetter(params.get("Event").toString().toLowerCase()) + "Event";
+					+ StringUtils.upperCaseFirstLetter(params.get("Event")
+							.toString().toLowerCase()) + "Event";
 
 		} else {
 
-			className = "edu.demo.bean.message.receive." + StringUtils.upperCaseFirstLetter(type.toLowerCase())
+			className = "edu.demo.bean.message.receive."
+					+ StringUtils.upperCaseFirstLetter(type.toLowerCase())
 					+ "Receive";
 		}
 
-		Class<WeChatMessage> clz = (Class<WeChatMessage>) Class.forName(className);
+		Class<WeChatMessage> clz = (Class<WeChatMessage>) Class
+				.forName(className);
 
 		return BeanUtils.beanFromMap(clz, params);
 
 	}
 
-	public static WeChatMessage parseMessageAndReply(WeChatMessage receive)
+	public WeChatMessage parseMessageAndReply(WeChatMessage receive)
 			throws UnsupportedEncodingException, DocumentException {
 
 		MessageType type = receive.getMsgType();
@@ -83,11 +93,13 @@ public class WeChatMessageFactory {
 			} else {
 				// 是普通文本内容
 				// 调用聊天机器人接口
-				reply = getTulingResponseAndReply(content, text.getFromUserName(), text.getToUserName());
+				reply = getTulingResponseAndReply(content,
+						text.getFromUserName(), text.getToUserName());
 			}
 
 			if (reply == null)
-				reply = generateTextReply(text.getToUserName(), text.getFromUserName(), content);
+				reply = generateTextReply(text.getToUserName(),
+						text.getFromUserName(), content);
 
 			break;
 		case IMAGE:
@@ -113,7 +125,8 @@ public class WeChatMessageFactory {
 			if (!org.springframework.util.StringUtils.isEmpty(recognition)) {
 				// 识别出了语音信息
 				// 调用聊天机器人接口
-				reply = getTulingResponseAndReply(recognition, voice.getFromUserName(), voice.getToUserName());
+				reply = getTulingResponseAndReply(recognition,
+						voice.getFromUserName(), voice.getToUserName());
 			} else {
 				VoiceReply vr = new VoiceReply();
 				vr.setFromUserName(voice.getToUserName());
@@ -131,7 +144,8 @@ public class WeChatMessageFactory {
 		case LOCATION:
 			LocationReceive location = (LocationReceive) receive;
 
-			reply = generateTextReply(location.getToUserName(), location.getFromUserName(),
+			reply = generateTextReply(location.getToUserName(),
+					location.getFromUserName(),
 					"已收到你的地址（" + location.getLabel() + "）");
 			break;
 		case VIDEO:
@@ -149,7 +163,8 @@ public class WeChatMessageFactory {
 			//
 			// vo.setVideo(vod);
 
-			reply = generateTextReply(video.getToUserName(), video.getFromUserName(), "流量都没了发什么视频啊");
+			reply = generateTextReply(video.getToUserName(),
+					video.getFromUserName(), "流量都没了发什么视频啊");
 			break;
 		case EVENT:
 
@@ -158,7 +173,8 @@ public class WeChatMessageFactory {
 			EventType eventType = event.getEvent();
 
 			if (eventType == EventType.SUBSCRIBE) {
-				reply = generateTextReply(event.getToUserName(), event.getFromUserName(), "你好啊，欢迎关注我，我们可以开始聊天了。");
+				reply = generateTextReply(event.getToUserName(),
+						event.getFromUserName(), "你好啊，欢迎关注我，我们可以开始聊天了。");
 			}
 
 			break;
@@ -169,7 +185,7 @@ public class WeChatMessageFactory {
 
 	}
 
-	public static TextReply generateTextReply(String from, String to, String content) {
+	public TextReply generateTextReply(String from, String to, String content) {
 		TextReply reply = new TextReply();
 		reply.setFromUserName(from);
 		reply.setToUserName(to);
@@ -179,17 +195,18 @@ public class WeChatMessageFactory {
 		return reply;
 	}
 
-	public static String getMessageCreateTime() {
+	public String getMessageCreateTime() {
 		return String.valueOf(System.currentTimeMillis() / 1000);
 	}
 
-	public static WeChatMessage getTulingResponseAndReply(String content, String fromUserName, String toUserName)
+	public WeChatMessage getTulingResponseAndReply(String content,
+			String fromUserName, String toUserName)
 			throws UnsupportedEncodingException {
 
 		WeChatMessage reply = null;
 
-		Map<String, Object> tulingResponse = TulingApiProcess.getChatAIResponse(content,
-				fromUserName.replaceAll("_", ""));
+		Map<String, Object> tulingResponse = turingApiService
+				.getChatAIResponse(content, fromUserName.replaceAll("_", ""));
 
 		if (tulingResponse != null && !tulingResponse.isEmpty()) {
 			String code = tulingResponse.get("code").toString();
@@ -206,8 +223,8 @@ public class WeChatMessageFactory {
 				break;
 			case "200000":
 				// 链接类
-				content = tulingResponse.get("text").toString() + " <a href='" + tulingResponse.get("url")
-						+ "'>打开链接</a>";
+				content = tulingResponse.get("text").toString() + " <a href='"
+						+ tulingResponse.get("url") + "'>打开链接</a>";
 				break;
 			case "302000":
 				// 新闻类
@@ -227,7 +244,8 @@ public class WeChatMessageFactory {
 				}
 
 				@SuppressWarnings("unchecked")
-				List<Map<String, String>> newsList = (List<Map<String, String>>) tulingResponse.get("list");
+				List<Map<String, String>> newsList = (List<Map<String, String>>) tulingResponse
+						.get("list");
 
 				Collections.shuffle(newsList);
 
@@ -269,7 +287,8 @@ public class WeChatMessageFactory {
 		return reply;
 	}
 
-	public static void main(String[] args) throws DocumentException, ClassNotFoundException, InstantiationException,
+	public static void main(String[] args) throws DocumentException,
+			ClassNotFoundException, InstantiationException,
 			IllegalAccessException, UnsupportedEncodingException {
 		// {MsgId=6388265220498273458,
 		// FromUserName=oFwZsw_zDjIHYFBbATwlsproGO3A, CreateTime=1487383903,
@@ -287,11 +306,13 @@ public class WeChatMessageFactory {
 		params.put("Location_Y", "109.014420");
 		params.put("MsgType", "location");
 
-		WeChatMessage receive = parseMapToMessage(params);
+		WeChatMessageService service = new WeChatMessageService();
+
+		WeChatMessage receive = service.parseMapToMessage(params);
 
 		System.out.println(receive);
 
-		WeChatMessage reply = parseMessageAndReply(receive);
+		WeChatMessage reply = service.parseMessageAndReply(receive);
 
 		System.out.println(reply);
 	}
