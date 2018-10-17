@@ -1,6 +1,8 @@
 package edu.demo;
 
 public class Test {
+	
+	//https://github.com/wechat-group/weixin-java-tools
 
 	public final static String unicodeReg= "["+  
             "\u4E00-\u9FBF"+//：CJK 统一表意符号 (CJK Unified Ideographs)  
